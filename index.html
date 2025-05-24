@@ -2,9 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Phantom Wallet + Balance Test</title>
-  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.73.2/lib/index.iife.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@solana/spl-token@0.3.5/lib/index.iife.min.js"></script>
+  <title>Phantom Wallet Test</title>
   <style>
     body {
       background-color: #000;
@@ -13,93 +11,62 @@
       padding: 2rem;
     }
     button {
-      margin: 0.5rem 0;
-      padding: 0.75rem;
+      padding: 0.5rem 1rem;
+      margin: 0.5rem;
+      font-size: 1rem;
       background: #111;
       border: 1px solid #0f0;
       color: #0f0;
       cursor: pointer;
     }
-    #status, #balances {
+    #status {
       margin-top: 1rem;
     }
   </style>
 </head>
 <body>
-  <h1>🧪 Phantom Wallet Test</h1>
-
-  <button onclick="connectPhantom()">Connect Phantom</button>
-  <button onclick="disconnectPhantom()">Disconnect</button>
-
+  <h1>🧪 Phantom Wallet Connect Test</h1>
+  <button id="connectBtn">Connect Phantom</button>
+  <button id="disconnectBtn">Disconnect</button>
   <div id="status">Status: Not connected</div>
-  <div id="balances"></div>
 
   <script>
-    const { Connection, PublicKey } = solanaWeb3;
-    const { getAccount, getAssociatedTokenAddress } = splToken;
+    document.addEventListener("DOMContentLoaded", () => {
+      const connectBtn = document.getElementById("connectBtn");
+      const disconnectBtn = document.getElementById("disconnectBtn");
+      const statusDiv = document.getElementById("status");
 
-    const USDC_MINT = new PublicKey("Es9vMFrzaCER7WAKyi5zj6Tj62i7P4J2RYnEvMZgdg24");
-    const USDT_MINT = new PublicKey("7XSYfhC8YVJvL7VDvKnYDKZ6SnRAwZXwfbE1r8yXK6b7");
+      let provider = window.solana;
 
-    const connection = new Connection("https://api.mainnet-beta.solana.com");
-    let provider = null;
-
-    async function connectPhantom() {
-      if (!window.solana || !window.solana.isPhantom) {
-        alert("Phantom not found");
-        return;
-      }
-
-      try {
-        const resp = await window.solana.connect();
-        provider = window.solana;
-        const publicKey = resp.publicKey.toString();
-        document.getElementById('status').innerText = "Connected: " + publicKey;
-        showBalances(resp.publicKey);
-      } catch (err) {
-        console.error("Connect error:", err);
-        document.getElementById('status').innerText = "Connection failed.";
-      }
-    }
-
-    function disconnectPhantom() {
-      try {
-        if (provider && provider.isConnected) {
-          provider.disconnect();
-          provider = null;
-          document.getElementById('status').innerText = "Disconnected.";
-          document.getElementById('balances').innerText = "";
+      connectBtn.addEventListener("click", async () => {
+        if (!provider || !provider.isPhantom) {
+          alert("Phantom wallet not found");
+          return;
         }
-      } catch (e) {
-        console.error("Disconnect error:", e);
-      }
-    }
 
-    async function showBalances(walletPubKey) {
-      const usdcAddr = await getAssociatedTokenAddress(USDC_MINT, walletPubKey);
-      const usdtAddr = await getAssociatedTokenAddress(USDT_MINT, walletPubKey);
+        try {
+          const resp = await provider.connect();
+          statusDiv.innerText = "Connected: " + resp.publicKey.toString();
+        } catch (err) {
+          console.error("Connect failed:", err);
+          statusDiv.innerText = "Connection failed.";
+        }
+      });
 
-      let usdcBalance = 0;
-      let usdtBalance = 0;
-
-      try {
-        const usdcAcc = await getAccount(connection, usdcAddr);
-        usdcBalance = Number(usdcAcc.amount) / 1_000_000;
-      } catch (e) {
-        console.warn("No USDC balance found");
-      }
-
-      try {
-        const usdtAcc = await getAccount(connection, usdtAddr);
-        usdtBalance = Number(usdtAcc.amount) / 1_000_000;
-      } catch (e) {
-        console.warn("No USDT balance found");
-      }
-
-      document.getElementById('balances').innerText = `USDC: ${usdcBalance}\nUSDT: ${usdtBalance}`;
-    }
+      disconnectBtn.addEventListener("click", () => {
+        try {
+          if (provider?.isConnected) {
+            provider.disconnect();
+            statusDiv.innerText = "Disconnected.";
+          }
+        } catch (err) {
+          console.error("Disconnect failed:", err);
+        }
+      });
+    });
   </script>
 </body>
 </html>
+
 
 
