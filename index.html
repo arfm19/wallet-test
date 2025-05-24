@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Wallet Connect Test</title>
+  <title>Wallet Connect + Balance Test</title>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/spl-token@latest/lib/index.iife.min.js"></script>
+  <script src="https://unpkg.com/@solflare-wallet/sdk@latest/dist/solflare.umd.min.js"></script>
   <style>
     body {
       background-color: #000;
@@ -24,16 +27,25 @@
   </style>
 </head>
 <body>
-  <h1>🧪 Phantom & Solflare Wallet Connect Test</h1>
+  <h1>💳 Wallet Connect & Balance Checker</h1>
 
   <button onclick="connectPhantom()">Connect Phantom</button>
   <button onclick="connectSolflare()">Connect Solflare</button>
   <button onclick="disconnectWallet()">Disconnect</button>
 
   <div id="status">Status: Not connected</div>
+  <div id="balances"></div>
 
   <script>
+    const { Connection, PublicKey } = solanaWeb3;
+    const { TOKEN_PROGRAM_ID, getAccount, getAssociatedTokenAddress } = splToken;
+
+    const USDC_MINT = new PublicKey("Es9vMFrzaCER7WAKyi5zj6Tj62i7P4J2RYnEvMZgdg24");
+    const USDT_MINT = new PublicKey("Es9vMFrzaCER7WAKyi5zj6Tj62i7P4J2RYnEvMZgdg24"); // Solana's wrapped Tether also often uses this address
+
+    const connection = new Connection("https://api.mainnet-beta.solana.com");
     let currentWallet = null;
+    let currentPublicKey = null;
 
     async function connectPhantom() {
       if (!window.solana || !window.solana.isPhantom) {
@@ -43,7 +55,9 @@
       try {
         const resp = await window.solana.connect();
         currentWallet = window.solana;
-        document.getElementById('status').innerText = 'Connected: ' + resp.publicKey.toString();
+        currentPublicKey = resp.publicKey;
+        document.getElementById('status').innerText = 'Connected to Phantom: ' + currentPublicKey.toString();
+        await showBalances();
       } catch (err) {
         console.error(err);
         document.getElementById('status').innerText = 'Connection failed.';
@@ -51,15 +65,13 @@
     }
 
     async function connectSolflare() {
-      const provider = window.solflare;
-      if (!provider || !provider.isSolflare) {
-        alert('Solflare wallet not found.');
-        return;
-      }
       try {
-        const resp = await provider.connect();
-        currentWallet = provider;
-        document.getElementById('status').innerText = 'Connected: ' + resp.publicKey.toString();
+        const solflare = new Solflare();
+        await solflare.connect();
+        currentWallet = solflare;
+        currentPublicKey = solflare.publicKey;
+        document.getElementById('status').innerText = 'Connected to Solflare: ' + currentPublicKey.toString();
+        await showBalances();
       } catch (err) {
         console.error(err);
         document.getElementById('status').innerText = 'Connection failed.';
@@ -69,9 +81,38 @@
     function disconnectWallet() {
       if (currentWallet && currentWallet.disconnect) {
         currentWallet.disconnect();
-        document.getElementById('status').innerText = 'Disconnected.';
       }
+      currentWallet = null;
+      currentPublicKey = null;
+      document.getElementById('status').innerText = 'Disconnected.';
+      document.getElementById('balances').innerText = '';
+    }
+
+    async function showBalances() {
+      const usdcAddr = await getAssociatedTokenAddress(USDC_MINT, currentPublicKey);
+      const usdtAddr = await getAssociatedTokenAddress(USDT_MINT, currentPublicKey);
+
+      let usdcBalance = 0;
+      let usdtBalance = 0;
+
+      try {
+        const usdcAccount = await getAccount(connection, usdcAddr);
+        usdcBalance = Number(usdcAccount.amount) / 1_000_000;
+      } catch (e) {
+        console.warn("No USDC account");
+      }
+
+      try {
+        const usdtAccount = await getAccount(connection, usdtAddr);
+        usdtBalance = Number(usdtAccount.amount) / 1_000_000;
+      } catch (e) {
+        console.warn("No USDT account");
+      }
+
+      document.getElementById('balances').innerText =
+        `💰 USDC Balance: ${usdcBalance}\n💵 USDT Balance: ${usdtBalance}`;
     }
   </script>
 </body>
 </html>
+
