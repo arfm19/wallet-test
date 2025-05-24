@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Wallet Connect Test</title>
+  <style>
+    body {
+      background-color: #000;
+      color: #0f0;
+      font-family: monospace;
+      padding: 2rem;
+    }
+    button {
+      margin: 0.5rem 0;
+      padding: 0.75rem;
+      background: #111;
+      border: 1px solid #0f0;
+      color: #0f0;
+      cursor: pointer;
+    }
+    #status {
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Phantom & Solflare Wallet Connect Test</h1>
+
+  <button onclick="connectPhantom()">Connect Phantom</button>
+  <button onclick="connectSolflare()">Connect Solflare</button>
+  <button onclick="disconnectWallet()">Disconnect</button>
+
+  <div id="status">Status: Not connected</div>
+
+  <script>
+    let currentWallet = null;
+
+    async function connectPhantom() {
+      if (!window.solana || !window.solana.isPhantom) {
+        alert('Phantom wallet not found.');
+        return;
+      }
+      try {
+        const resp = await window.solana.connect();
+        currentWallet = window.solana;
+        document.getElementById('status').innerText = 'Connected: ' + resp.publicKey.toString();
+      } catch (err) {
+        console.error(err);
+        document.getElementById('status').innerText = 'Connection failed.';
+      }
+    }
+
+    async function connectSolflare() {
+      const provider = window.solflare;
+      if (!provider || !provider.isSolflare) {
+        alert('Solflare wallet not found.');
+        return;
+      }
+      try {
+        const resp = await provider.connect();
+        currentWallet = provider;
+        document.getElementById('status').innerText = 'Connected: ' + resp.publicKey.toString();
+      } catch (err) {
+        console.error(err);
+        document.getElementById('status').innerText = 'Connection failed.';
+      }
+    }
+
+    function disconnectWallet() {
+      if (currentWallet && currentWallet.disconnect) {
+        currentWallet.disconnect();
+        document.getElementById('status').innerText = 'Disconnected.';
+      }
+    }
+  </script>
+</body>
+</html>
