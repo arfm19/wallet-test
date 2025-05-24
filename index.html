@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Phantom Wallet + Balance</title>
+  <title>Phantom Wallet Balance Test</title>
   <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.73.2/lib/index.iife.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@solana/spl-token@0.3.5/lib/index.iife.min.js"></script>
   <style>
@@ -15,47 +15,44 @@
     button {
       padding: 0.5rem 1rem;
       margin: 0.5rem;
-      font-size: 1rem;
       background: #111;
       border: 1px solid #0f0;
       color: #0f0;
+      font-size: 1rem;
       cursor: pointer;
     }
     #status, #balances {
       margin-top: 1rem;
+      white-space: pre-line;
     }
   </style>
 </head>
 <body>
-  <h1>🧪 Phantom Wallet + Balance Monitor</h1>
+  <h1>🧪 Phantom Wallet Test</h1>
   <button id="connectBtn">Connect Phantom</button>
   <button id="disconnectBtn">Disconnect</button>
 
   <div id="status">Status: Not connected</div>
-  <div id="balances">USDC: -, USDT: -</div>
+  <div id="balances">USDC: -\nUSDT: -</div>
 
   <script>
-    // Debug line to confirm JavaScript is running
-    console.log("🧠 JS loaded");
-
     const { Connection, PublicKey } = solanaWeb3;
-    const connection = new Connection("https://api.mainnet-beta.solana.com");
+    const { getAssociatedTokenAddress, getAccount } = splToken;
 
     const USDC_MINT = new PublicKey("Es9vMFrzaCER7WAKyi5zj6Tj62i7P4J2RYnEvMZgdg24");
     const USDT_MINT = new PublicKey("7XSYfhC8YVJvL7VDvKnYDKZ6SnRAwZXwfbE1r8yXK6b7");
 
+    const connection = new Connection("https://api.mainnet-beta.solana.com");
     let provider = null;
     let publicKey = null;
 
     document.addEventListener("DOMContentLoaded", () => {
-      console.log("🔘 DOM fully loaded");
+      provider = window.solana;
 
       const connectBtn = document.getElementById("connectBtn");
       const disconnectBtn = document.getElementById("disconnectBtn");
       const statusDiv = document.getElementById("status");
       const balancesDiv = document.getElementById("balances");
-
-      provider = window.solana;
 
       connectBtn.addEventListener("click", async () => {
         if (!provider || !provider.isPhantom) {
@@ -65,5 +62,47 @@
 
         try {
           const resp = await provider.connect();
-          publicKey = resp.
+          publicKey = resp.publicKey;
+          statusDiv.innerText = "Connected: " + publicKey.toString();
+          await showBalances(publicKey, balancesDiv);
+        } catch (err) {
+          console.error("Connection failed:", err);
+          statusDiv.innerText = "Connection failed.";
+        }
+      });
 
+      disconnectBtn.addEventListener("click", () => {
+        if (provider?.isConnected) {
+          provider.disconnect();
+        }
+        publicKey = null;
+        statusDiv.innerText = "Disconnected.";
+        balancesDiv.innerText = "USDC: -\nUSDT: -";
+      });
+    });
+
+    async function showBalances(pubkey, displayElem) {
+      try {
+        const usdcAddr = await getAssociatedTokenAddress(USDC_MINT, pubkey);
+        const usdtAddr = await getAssociatedTokenAddress(USDT_MINT, pubkey);
+
+        let usdcBalance = "0", usdtBalance = "0";
+
+        try {
+          const acc = await getAccount(connection, usdcAddr);
+          usdcBalance = (Number(acc.amount) / 1_000_000).toFixed(2);
+        } catch {}
+
+        try {
+          const acc = await getAccount(connection, usdtAddr);
+          usdtBalance = (Number(acc.amount) / 1_000_000).toFixed(2);
+        } catch {}
+
+        displayElem.innerText = `USDC: ${usdcBalance}\nUSDT: ${usdtBalance}`;
+      } catch (err) {
+        console.error("Balance fetch error:", err);
+      }
+    }
+  </script>
+</body>
+</html>
